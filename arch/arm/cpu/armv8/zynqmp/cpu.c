@@ -160,6 +160,7 @@ int __maybe_unused invoke_smc(u32 pm_api_id, u32 arg0, u32 arg1, u32 arg2,
 				 ZYNQMP_PM_VERSION_MINOR)
 
 #if defined(CONFIG_CLK_ZYNQMP)
+#define DK
 void zynqmp_pmufw_version(void)
 {
 	int ret;
@@ -169,7 +170,10 @@ void zynqmp_pmufw_version(void)
 	ret = invoke_smc(ZYNQMP_SIP_SVC_GET_API_VERSION, 0, 0, 0, 0,
 			 ret_payload);
 	pm_api_version = ret_payload[1];
-
+#ifdef DK
+	printf("DK: PMUFW is skipped\n");
+	return;
+#else
 	if (ret)
 		panic("PMUFW is not found - Please load it!\n");
 
@@ -180,6 +184,7 @@ void zynqmp_pmufw_version(void)
 	if (pm_api_version != ZYNQMP_PM_VERSION)
 		panic("PMUFW version error. Expected: v%d.%d\n",
 		      ZYNQMP_PM_VERSION_MAJOR, ZYNQMP_PM_VERSION_MINOR);
+#endif
 }
 #endif
 
@@ -224,14 +229,27 @@ int zynqmp_mmio_read(const u32 address, u32 *value)
 
 	if (!value)
 		return -EINVAL;
-
+#ifdef DK
+	if (IS_ENABLED(CONFIG_SPL_BUILD)) {
+		debug("IS_ENABLED(CONFIG_SPL_BUILD) is true\n");
+	} else {
+		debug("IS_ENABLED(CONFIG_SPL_BUILD) is false\n");
+	}
+#endif
+#ifdef DK // test
+		ret = zynqmp_mmio_rawread(address, value);
+#else
 	if (IS_ENABLED(CONFIG_SPL_BUILD) || current_el() == 3) {
 		ret = zynqmp_mmio_rawread(address, value);
+#ifdef DK
+debug("zynqmp_mmio_read: zynqmp_mmio_rawread returns 0x%x\n", ret);
+#endif
 	} else if (!IS_ENABLED(CONFIG_SPL_BUILD)) {
 		ret = invoke_smc(ZYNQMP_MMIO_READ, address, 0, 0,
 				 0, ret_payload);
+debug("zynqmp_mmio_read: invoke_smc returns 0x%x\n", ret);
 		*value = ret_payload[1];
 	}
-
+#endif
 	return ret;
 }

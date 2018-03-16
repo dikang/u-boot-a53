@@ -111,6 +111,7 @@ static const resource_size_t zynqmp_crl_apb_clkc_base = 0xff5e0020;
 
 #define NUM_MIO_PINS	77
 
+#define ORG
 enum zynqmp_clk {
 	iopll, rpll,
 	apll, dpll, vpll,
@@ -315,10 +316,15 @@ static ulong zynqmp_clk_get_pll_rate(struct zynqmp_clk_priv *priv,
 	int ret;
 
 	ret = zynqmp_mmio_read(zynqmp_clk_get_register(id), &clk_ctrl);
+#ifdef ORG
 	if (ret) {
 		printf("%s mio read fail\n", __func__);
 		return -EIO;
 	}
+#else
+if (zynqmp_clk_get_register(id) == 0xff5e0020) clk_ctrl = 0x13200;
+printf("%s: read (0x%x), value (0x%x)\n", __func__, zynqmp_clk_get_register(id), clk_ctrl);
+#endif
 
 	if (clk_ctrl & PLLCTRL_BYPASS_MASK)
 		freq = zynqmp_clk_get_pll_src(clk_ctrl, priv, 0);
@@ -348,6 +354,10 @@ static ulong zynqmp_clk_get_cpu_rate(struct zynqmp_clk_priv *priv,
 	unsigned long pllrate;
 
 	ret = zynqmp_mmio_read(CRF_APB_ACPU_CTRL, &clk_ctrl);
+#ifdef ORG
+#else
+printf("%s: read (0x%x), value (0x%x)\n", __func__, CRF_APB_ACPU_CTRL, clk_ctrl);
+#endif
 	if (ret) {
 		printf("%s mio read fail\n", __func__);
 		return -EIO;
@@ -371,6 +381,10 @@ static ulong zynqmp_clk_get_ddr_rate(struct zynqmp_clk_priv *priv)
 	ulong pllrate;
 
 	ret = zynqmp_mmio_read(CRF_APB_DDR_CTRL, &clk_ctrl);
+#ifdef ORG
+#else
+printf("%s: read (0x%x), value (0x%x)\n", __func__, CRF_APB_DDR_CTRL, clk_ctrl);
+#endif
 	if (ret) {
 		printf("%s mio read fail\n", __func__);
 		return -EIO;
@@ -396,10 +410,16 @@ static ulong zynqmp_clk_get_peripheral_rate(struct zynqmp_clk_priv *priv,
 	ulong pllrate;
 
 	ret = zynqmp_mmio_read(zynqmp_clk_get_register(id), &clk_ctrl);
+#ifdef ORG
 	if (ret) {
 		printf("%s mio read fail\n", __func__);
 		return -EIO;
 	}
+#else
+if (zynqmp_clk_get_register(id) == 0xff5e0074) clk_ctrl = 0x1000500;
+
+printf("%s: read (0x%x), value (0x%x)\n", __func__, zynqmp_clk_get_register(id), clk_ctrl);
+#endif
 
 	div0 = (clk_ctrl & CLK_CTRL_DIV0_MASK) >> CLK_CTRL_DIV0_SHIFT;
 	if (!div0)
@@ -460,6 +480,10 @@ static ulong zynqmp_clk_set_peripheral_rate(struct zynqmp_clk_priv *priv,
 
 	reg = zynqmp_clk_get_register(id);
 	ret = zynqmp_mmio_read(reg, &clk_ctrl);
+#ifdef ORG
+#else
+printf("%s: read (0x%x), value (0x%x)\n", __func__, zynqmp_clk_get_register(id), clk_ctrl);
+#endif
 	if (ret) {
 		printf("%s mio read fail\n", __func__);
 		return -EIO;

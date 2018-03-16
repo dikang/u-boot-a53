@@ -58,6 +58,7 @@
 #ifndef CONFIG_SPL_BUILD
 # define CONFIG_ISO_PARTITION
 #endif
+#define CONFIG_MP
 
 /* BOOTP options */
 #define CONFIG_BOOTP_BOOTFILESIZE
@@ -178,11 +179,13 @@
 # define PARTS_DEFAULT
 #endif
 
+/* DK: initrd_addr=original 0xa00000 */ 
+/* DK: loadbootenv_addr=original 0x100000 */ \
 /* Initial environment variables */
 #ifndef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"kernel_addr=0x80000\0" \
-	"initrd_addr=0xa00000\0" \
+	"initrd_addr=0x6000000\0" \
 	"initrd_size=0x2000000\0" \
 	"fdt_addr=4000000\0" \
 	"fdt_high=0x10000000\0" \
@@ -250,8 +253,9 @@
 		"run xen_prepare_dt_qemu && " \
 		"tftpb 6000000 xen.ub && tftpb 0x1000000 image.ub && " \
 		"bootm 6000000 0x1000000 $fdt_addr\0" \
-	"jtagboot=tftpboot 80000 Image && tftpboot $fdt_addr system.dtb && " \
+	"jtagboot=run jtagmemboot || tftpboot 80000 Image && tftpboot $fdt_addr system.dtb && " \
 		 "tftpboot 6000000 rootfs.cpio.ub && booti 80000 6000000 $fdt_addr\0" \
+        "jtagmemboot=if itest.w *0x80038 == 0x644d5241; then if iminfo 0x6000000; then booti 0x80000 0x6000000 $fdt_addr; else booti 0x80000 - $fdt_addr; fi; fi\0" \
 	"nosmp=setenv bootargs $bootargs maxcpus=1\0" \
 	"nfsroot=setenv bootargs $bootargs root=/dev/nfs nfsroot=$serverip:/mnt/sata,tcp ip=$ipaddr:$serverip:$serverip:255.255.255.0:zynqmp:eth0:off rw\0" \
 	"sdroot0=setenv bootargs $bootargs root=/dev/mmcblk0p2 rw rootwait\0" \

@@ -16,21 +16,49 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#define HPSC
+#define HPSC_NON_SMC
 static struct mm_region zynqmp_mem_map[] = {
 	{
+#ifdef HPSC
+		.virt = 0x80000000UL,
+		.phys = 0x80000000UL,
+		.size = 0x40000000UL,
+#else
 		.virt = 0x0UL,
 		.phys = 0x0UL,
 		.size = 0x80000000UL,
+#endif
 		.attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) |
 			 PTE_BLOCK_INNER_SHARE
-	}, {
+	}, 
+#ifdef HPSC
+	{
+		.virt = 0x100000000UL,
+		.phys = 0x100000000UL,
+		.size = 0x80000000UL,
+		.attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) |
+			 PTE_BLOCK_INNER_SHARE
+	}, 
+	{
+		.virt = 0xC0000000UL,
+		.phys = 0xC0000000UL,
+		.size = 0x30000000UL,
+		.attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
+			 PTE_BLOCK_NON_SHARE |
+			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
+	}, 
+#else
+	{
 		.virt = 0x80000000UL,
 		.phys = 0x80000000UL,
 		.size = 0x70000000UL,
 		.attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 			 PTE_BLOCK_NON_SHARE |
 			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
-	}, {
+	}, 
+#endif
+	{
 		.virt = 0xf8000000UL,
 		.phys = 0xf8000000UL,
 		.size = 0x07e00000UL,
@@ -130,7 +158,8 @@ int __maybe_unused invoke_smc(u32 pm_api_id, u32 arg0, u32 arg1, u32 arg2,
 	 * Make sure to stay in x0 register
 	 */
 	struct pt_regs regs;
-
+	debug("%s: starts, pm_api_id(0x%x), arg0(0x%x), arg1(0x%x), arg2(0x%x), arg3(0x%x)\n",
+		__func__, pm_api_id, arg0, arg1, arg2, arg3);
 	regs.regs[0] = pm_api_id;
 	regs.regs[1] = ((u64)arg1 << 32) | arg0;
 	regs.regs[2] = ((u64)arg3 << 32) | arg2;
@@ -160,7 +189,6 @@ int __maybe_unused invoke_smc(u32 pm_api_id, u32 arg0, u32 arg1, u32 arg2,
 				 ZYNQMP_PM_VERSION_MINOR)
 
 #if defined(CONFIG_CLK_ZYNQMP)
-#define DK
 void zynqmp_pmufw_version(void)
 {
 	int ret;
@@ -170,8 +198,8 @@ void zynqmp_pmufw_version(void)
 	ret = invoke_smc(ZYNQMP_SIP_SVC_GET_API_VERSION, 0, 0, 0, 0,
 			 ret_payload);
 	pm_api_version = ret_payload[1];
-#ifdef DK
-	printf("DK: PMUFW is skipped\n");
+#ifdef HPSC
+	printf("HPSC: PMUFW is skipped\n");
 	return;
 #else
 	if (ret)
@@ -213,12 +241,15 @@ int zynqmp_mmio_write(const u32 address,
 		      const u32 mask,
 		      const u32 value)
 {
+#ifdef HPSC_NON_SMC // When TRCH handles power management, this should be fixed
+	return zynqmp_mmio_rawwrite(address, mask, value);
+#else
 	if (IS_ENABLED(CONFIG_SPL_BUILD) || current_el() == 3)
 		return zynqmp_mmio_rawwrite(address, mask, value);
 	else if (!IS_ENABLED(CONFIG_SPL_BUILD))
 		return invoke_smc(ZYNQMP_MMIO_WRITE, address, mask,
 				  value, 0, NULL);
-
+#endif
 	return -EINVAL;
 }
 
@@ -229,25 +260,23 @@ int zynqmp_mmio_read(const u32 address, u32 *value)
 
 	if (!value)
 		return -EINVAL;
-#ifdef DK
+#ifdef HPSC_NON_SMC
 	if (IS_ENABLED(CONFIG_SPL_BUILD)) {
 		debug("IS_ENABLED(CONFIG_SPL_BUILD) is true\n");
 	} else {
 		debug("IS_ENABLED(CONFIG_SPL_BUILD) is false\n");
 	}
 #endif
-#ifdef DK // test
-		ret = zynqmp_mmio_rawread(address, value);
+#ifdef HPSC_NON_SMC // When TRCH handles power management, this should be fixed
+	ret = zynqmp_mmio_rawread(address, value);
 #else
 	if (IS_ENABLED(CONFIG_SPL_BUILD) || current_el() == 3) {
 		ret = zynqmp_mmio_rawread(address, value);
-#ifdef DK
-debug("zynqmp_mmio_read: zynqmp_mmio_rawread returns 0x%x\n", ret);
-#endif
+		debug("zynqmp_mmio_read: zynqmp_mmio_rawread returns 0x%x\n", ret);
 	} else if (!IS_ENABLED(CONFIG_SPL_BUILD)) {
 		ret = invoke_smc(ZYNQMP_MMIO_READ, address, 0, 0,
 				 0, ret_payload);
-debug("zynqmp_mmio_read: invoke_smc returns 0x%x\n", ret);
+		debug("zynqmp_mmio_read: invoke_smc returns 0x%x\n", ret);
 		*value = ret_payload[1];
 	}
 #endif

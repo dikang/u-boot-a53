@@ -21,6 +21,8 @@
 #include <i2c.h>
 #include <g_dnl.h>
 
+#define HPSC
+
 DECLARE_GLOBAL_DATA_PTR;
 
 #if defined(CONFIG_FPGA) && defined(CONFIG_FPGA_ZYNQMPPL) && \
@@ -430,11 +432,18 @@ int board_late_init(void)
 	 * One terminating char + one byte for space between mode
 	 * and default boot_targets
 	 */
+#ifdef HPSC
+	char * cc = getenv("boot_targets");
+	int cmd_length = ((cc == NULL) ? 0 : strlen(cc));
+	new_targets = calloc(1, strlen(mode)+cmd_length+2);
+#else
 	new_targets = calloc(1, strlen(mode) +
 				strlen(getenv("boot_targets")) + 2);
+#endif
 
 	sprintf(new_targets, "%s %s", mode, getenv("boot_targets"));
 	setenv("boot_targets", new_targets);
+
 
 	return 0;
 }

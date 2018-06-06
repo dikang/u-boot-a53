@@ -128,7 +128,7 @@
 #endif
 
 /* Miscellaneous configurable options */
-#define CONFIG_SYS_LOAD_ADDR		0x8000000
+#define CONFIG_SYS_LOAD_ADDR		0x88000000
 
 #if defined(CONFIG_ZYNQMP_USB)
 #define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS      2
@@ -181,15 +181,17 @@
 
 /* DK: initrd_addr=original 0xa00000 */ 
 /* DK: loadbootenv_addr=original 0x100000 */ \
+ /* DK: original:  "jtagmemboot=if itest.w *0x80038 == 0x644d5241; then if iminfo  0x6000000;  then booti    0x80000  0x6000000 $fdt_addr; else booti    0x80000 - $fdt_addr; fi; fi\0" \ */
+/*DK: working:        "jtagmemboot=if itest.w *0x80080038 == 0x644d5241; then if iminfo 0x86000000 ; then booti 0x80080000 0x86000000 $fdt_addr; else booti 0x80080000- $fdt_addr; fi; fi\0" \ */
 /* Initial environment variables */
 #ifndef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	"kernel_addr=0x80000\0" \
-	"initrd_addr=0x6000000\0" \
+	"kernel_addr=0x80080000\0" \
+	"initrd_addr=0x86000000\0" \
 	"initrd_size=0x2000000\0" \
-	"fdt_addr=4000000\0" \
-	"fdt_high=0x10000000\0" \
-	"loadbootenv_addr=0x100000\0" \
+	"fdt_addr=0x84000000\0" \
+	"fdt_high=0x90000000\0" \
+	"loadbootenv_addr=0x80100000\0" \
 	"sdbootdev=0\0"\
 	"kernel_offset=0x180000\0" \
 	"fdt_offset=0x100000\0" \
@@ -255,7 +257,7 @@
 		"bootm 6000000 0x1000000 $fdt_addr\0" \
 	"jtagboot=run jtagmemboot || tftpboot 80000 Image && tftpboot $fdt_addr system.dtb && " \
 		 "tftpboot 6000000 rootfs.cpio.ub && booti 80000 6000000 $fdt_addr\0" \
-        "jtagmemboot=if itest.w *0x80038 == 0x644d5241; then if iminfo 0x6000000; then booti 0x80000 0x6000000 $fdt_addr; else booti 0x80000 - $fdt_addr; fi; fi\0" \
+        "jtagmemboot=if itest.w *0x80080038 == 0x644d5241; then if iminfo $initrd_addr ; then booti $kernel_addr $initrd_addr $fdt_addr; else booti $kernel_addr - $fdt_addr; fi; fi\0" \
 	"nosmp=setenv bootargs $bootargs maxcpus=1\0" \
 	"nfsroot=setenv bootargs $bootargs root=/dev/nfs nfsroot=$serverip:/mnt/sata,tcp ip=$ipaddr:$serverip:$serverip:255.255.255.0:zynqmp:eth0:off rw\0" \
 	"sdroot0=setenv bootargs $bootargs root=/dev/mmcblk0p2 rw rootwait\0" \
@@ -342,13 +344,13 @@
 #define CONFIG_CMD_CLK
 
 #define ENV_MEM_LAYOUT_SETTINGS \
-	"fdt_high=10000000\0" \
-	"initrd_high=10000000\0" \
-	"fdt_addr_r=0x40000000\0" \
-	"pxefile_addr_r=0x10000000\0" \
-	"kernel_addr_r=0x18000000\0" \
-	"scriptaddr=0x02000000\0" \
-	"ramdisk_addr_r=0x02100000\0" \
+	"fdt_high=90000000\0" \
+	"initrd_high=90000000\0" \
+	"fdt_addr_r=0xC0000000\0" \
+	"pxefile_addr_r=0x90000000\0" \
+	"kernel_addr_r=0x88000000\0" \
+	"scriptaddr=0x82000000\0" \
+	"ramdisk_addr_r=0x82100000\0" \
 
 #if defined(CONFIG_ZYNQ_SDHCI)
 # define BOOT_TARGET_DEVICES_MMC(func)	func(MMC, mmc, 0) func(MMC, mmc, 1)
@@ -389,10 +391,10 @@
 #if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_DFU_SUPPORT)
 #undef CONFIG_EXTRA_ENV_SETTINGS
 # define CONFIG_EXTRA_ENV_SETTINGS \
-	"dfu_alt_info_ram=uboot.bin ram 0x8000000 0x1000000;" \
-			  "atf-uboot.ub ram 0x10000000 0x1000000;" \
-			  "Image ram 0x80000 0x3f80000;" \
-			  "system.dtb ram 0x4000000 0x100000\0" \
+	"dfu_alt_info_ram=uboot.bin ram 0x88000000 0x1000000;" \
+			  "atf-uboot.ub ram 0x90000000 0x1000000;" \
+			  "Image ram 0x80080000 0x3f80000;" \
+			  "system.dtb ram 0x84000000 0x100000\0" \
 	"dfu_bufsiz=0x1000\0"
 #endif
 
@@ -419,13 +421,13 @@
 
 /* u-boot is like dtb */
 #define CONFIG_SPL_FS_LOAD_ARGS_NAME	"u-boot.bin"
-#define CONFIG_SYS_SPL_ARGS_ADDR	0x8000000
+#define CONFIG_SYS_SPL_ARGS_ADDR	0x88000000
 
 /* ATF is my kernel image */
 #define CONFIG_SPL_FS_LOAD_KERNEL_NAME	"atf-uboot.ub"
 
 /* FIT load address for RAM boot */
-#define CONFIG_SPL_LOAD_FIT_ADDRESS	0x10000000
+#define CONFIG_SPL_LOAD_FIT_ADDRESS	0x90000000
 
 /* MMC support */
 #ifdef CONFIG_ZYNQ_SDHCI
@@ -442,7 +444,7 @@
 # define CONFIG_SPL_HASH_SUPPORT
 # define CONFIG_ENV_MAX_ENTRIES	10
 
-# define CONFIG_SYS_SPL_MALLOC_START	0x20000000
+# define CONFIG_SYS_SPL_MALLOC_START	0xa0000000
 # define CONFIG_SYS_SPL_MALLOC_SIZE	0x100000
 
 #ifdef CONFIG_SPL_SYS_MALLOC_SIMPLE

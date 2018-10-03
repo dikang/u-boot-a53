@@ -8,6 +8,7 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
+#define HPSC
 / {
 	compatible = "xlnx,zynqmp";
 	#address-cells = <2>;
@@ -370,12 +371,19 @@
 		ranges = <0 0 0 0 0xffffffff>;
 
 		gic: interrupt-controller@f9010000 {
+#ifdef HPSC
+			compatible = "arm,gic-v3"; 
+			#interrupt-cells = <3>;
+			reg = <0x0 0xf9000000 0x10000>,
+			      <0x0 0xf9100000 0x100000>;
+#else
 			compatible = "arm,gic-400", "arm,cortex-a15-gic";
 			#interrupt-cells = <3>;
 			reg = <0x0 0xf9010000 0x10000>,
 			      <0x0 0xf9020000 0x20000>,
 			      <0x0 0xf9040000 0x20000>,
 			      <0x0 0xf9060000 0x20000>;
+#endif
 			interrupt-controller;
 			interrupt-parent = <&gic>;
 			interrupts = <1 9 0xf04>;
